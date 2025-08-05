@@ -41,9 +41,14 @@ func main() {
 	version := flag.String("version", "", "Package version")
 	groupName := flag.String("group", "", "Operation group name")
 	apiKey := flag.String("token", "", "Personal API key")
+
+	customTagKey := flag.String("x-key", "", "Custom tag key")
+	customTagValue := flag.String("x-value", "", "Custom tag value")
+
 	flag.Parse()
 
-	if *apihubUrl == "" || *packageID == "" || *version == "" || *groupName == "" || *apiKey == "" {
+	if *apihubUrl == "" || *packageID == "" || *version == "" || *groupName == "" || *apiKey == "" ||
+		*customTagKey == "" || *customTagValue == "" {
 		fmt.Println("Missing required parameters")
 		flag.Usage()
 		os.Exit(1)
@@ -59,8 +64,8 @@ func main() {
 	fmt.Printf("Operations count: %d\n", len(operations))
 
 	// Filter operations by custom tag
-	filteredOps := filterOperations(operations)
-	fmt.Printf("Found %d fileter operations matching conditions\n", len(filteredOps))
+	filteredOps := filterOperations(operations, *customTagKey, *customTagValue)
+	fmt.Printf("Found %d operations matching conditions\n", len(filteredOps))
 
 	if len(filteredOps) == 0 {
 		fmt.Println("No operations matching criteria found, exiting")
@@ -80,6 +85,8 @@ func main() {
 		os.Exit(1)
 	}
 	fmt.Printf("Group updated with %d operations\n", len(filteredOps))
+
+	// todo: export group(json, remove ext(all), mode=reduced source) and download to local disk
 }
 
 func listOperations(apihubUrl, packageID, version, apiKey string) ([]Operation, error) {
@@ -120,10 +127,7 @@ func listOperations(apihubUrl, packageID, version, apiKey string) ([]Operation, 
 	return allOps, nil
 }
 
-func filterOperations(ops []Operation) []Operation {
-	customTagKey := "x-abc"
-	targetValue := "def"
-
+func filterOperations(ops []Operation, customTagKey, customTagValue string) []Operation {
 	var filtered []Operation
 	for _, op := range ops {
 		val, exists := op.CustomTags[customTagKey]
@@ -134,17 +138,17 @@ func filterOperations(ops []Operation) []Operation {
 		var found bool
 		switch v := val.(type) {
 		case string:
-			found = (v == targetValue)
+			found = (v == customTagValue)
 		case []string:
 			for _, s := range v {
-				if s == targetValue {
+				if s == customTagValue {
 					found = true
 					break
 				}
 			}
 		case []interface{}:
 			for _, elem := range v {
-				if s, ok := elem.(string); ok && s == targetValue {
+				if s, ok := elem.(string); ok && s == customTagValue {
 					found = true
 					break
 				}
